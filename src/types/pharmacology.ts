@@ -1,5 +1,5 @@
 /**
- * Основные доменные типы платформы PharmaSphere (Этап 1 — Фундамент).
+ * Основные доменные типы платформы PharmaSphere.
  * Все демонстрационные записи используют стабильные идентификаторы и явные внешние ключи,
  * чтобы слой доступа к данным в дальнейшем можно было легко переключить на Supabase/PostgreSQL.
  */
@@ -35,22 +35,27 @@ export interface Drug {
   id: string;
   slug: string;
   genericName: string;
+  tradeNames: string[];
   commonReferenceAliases: string[];
   groupId: string;
   pharmacologicalClass: string;
   organSystem: OrganSystem;
   primaryTarget: string;
   mechanismOfAction: string;
+  pharmacodynamics: string;
   shortDescription: string;
   educationalSummary: string;
   keyPharmacokinetics: {
     routeSummary: string;
+    absorptionAndDistribution: string;
     halfLifeRange: string;
     eliminationSummary: string;
   };
   classicIndications: string[];
-  highYieldAdverseEffects: string[];
   contraindicationNotes: string[];
+  highYieldAdverseEffects: string[];
+  drugInteractions: string[];
+  specialConsiderations: string[];
   isFeatured: boolean;
   isDemoContent: true;
 }
@@ -76,6 +81,14 @@ export interface QuizQuestion {
   isDemoContent: true;
 }
 
+export interface LearningModuleTopic {
+  id: string;
+  number: number;
+  title: string;
+  summary: string;
+  durationMinutes: number;
+}
+
 export interface LearningModule {
   id: string;
   slug: string;
@@ -90,6 +103,7 @@ export interface LearningModule {
   defaultProgressPercent: number;
   lastTopicTitle: string;
   learningObjectives: string[];
+  topics: LearningModuleTopic[];
   isDemoContent: true;
 }
 

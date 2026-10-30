@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight, Clock, Trash2 } from "lucide-react";
 import { useAppState } from "@/features/preferences/app-state-context";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +14,16 @@ export function RecentlyStudiedCard() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2.5 px-4">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
-          <CardTitle>Недавно изученные</CardTitle>
-          {hasUserSessionHistory ? (
-            <Badge variant="emerald" className="text-[10px]">
-              Текущая сессия
-            </Badge>
-          ) : (
-            <Badge variant="amber" className="text-[10px]">
-              Демо-история
+          <Clock
+            className="h-4 w-4 text-teal-600 dark:text-teal-400"
+            aria-hidden="true"
+          />
+          <CardTitle>Недавно изученные препараты</CardTitle>
+          {!hasUserSessionHistory && (
+            <Badge variant="outline" className="text-[10px]">
+              Demo
             </Badge>
           )}
         </div>
@@ -32,7 +32,7 @@ export function RecentlyStudiedCard() {
           <button
             type="button"
             onClick={clearSessionHistory}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-rose-600 dark:text-slate-500"
           >
             <Trash2 className="h-3 w-3" aria-hidden="true" />
             <span>Очистить</span>
@@ -45,7 +45,7 @@ export function RecentlyStudiedCard() {
           <Link
             key={item.id}
             href={item.href}
-            className="group flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+            className="group flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-slate-900 group-hover:text-teal-700 dark:text-slate-100 dark:group-hover:text-teal-300">
@@ -60,7 +60,7 @@ export function RecentlyStudiedCard() {
             </div>
 
             <ArrowUpRight
-              className="h-3.5 w-3.5 shrink-0 text-slate-400 group-hover:text-teal-600 dark:group-hover:text-teal-400"
+              className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-teal-600 dark:text-slate-600 dark:group-hover:text-teal-400"
               aria-hidden="true"
             />
           </Link>

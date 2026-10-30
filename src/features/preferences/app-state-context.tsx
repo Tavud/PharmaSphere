@@ -312,11 +312,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       recordStudyActivity({
         entityId: questionId,
         itemType: "challenge",
-        title: `Вопрос дня: ${questionTitle}`,
+        title: `Тестовая задача: ${questionTitle}`,
         categoryLabel: isCorrect
           ? "Задача решена верно"
-          : "Разобрана задача дня",
-        href: "/app#daily-challenge",
+          : "Разобрана задача",
+        href: "/app/quiz",
         timestampLabel: isCorrect
           ? "Дан верный ответ в текущей сессии"
           : "Изучено пояснение в текущей сессии",

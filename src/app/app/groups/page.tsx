@@ -46,23 +46,23 @@ function GroupsDirectoryContent() {
     : undefined;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {highlightedGroup && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-teal-200 bg-teal-50/70 px-3.5 py-2 text-xs text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal-200 bg-teal-50/70 px-4 py-2.5 text-xs text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
           <span>
             Выбрана группа: <strong>{highlightedGroup.name}</strong>
           </span>
           <Link
             href="/app/groups"
-            className="inline-flex items-center gap-1 rounded border border-teal-300 bg-white px-2 py-0.5 text-[11px] font-medium text-teal-800 hover:bg-teal-50 dark:border-teal-700 dark:bg-slate-900 dark:text-teal-300"
+            className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-white px-2.5 py-1 text-[11px] font-medium text-teal-800 hover:bg-teal-50 dark:border-teal-700 dark:bg-slate-900 dark:text-teal-300"
           >
             <X className="h-3 w-3" aria-hidden="true" />
-            <span>Снять выделение</span>
+            <span>Снять фильтр</span>
           </Link>
         </div>
       )}
 
-      <Card className="divide-y divide-slate-100 dark:divide-slate-800">
+      <Card className="divide-y divide-slate-100 overflow-hidden dark:divide-slate-800/80">
         {groups.map((group) => {
           const memberDrugs = getDrugsByGroupId(group.id);
           const isHighlighted = highlightedGroupId === group.id;
@@ -74,25 +74,25 @@ function GroupsDirectoryContent() {
               key={group.id}
               id={group.id}
               className={cn(
-                "p-4 transition-colors",
+                "p-5 transition-colors sm:p-6",
                 isHighlighted
                   ? "bg-teal-50/40 dark:bg-teal-950/20"
                   : "hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
               )}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-0.5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
                       {group.name}
                     </h2>
                     <Badge variant="teal">{group.organSystem}</Badge>
                     {isHighlighted && (
-                      <Badge variant="emerald">Выделено</Badge>
+                      <Badge variant="emerald">Выбрано</Badge>
                     )}
                   </div>
-                  <p className="font-mono text-[11px] text-teal-700 dark:text-teal-400">
-                    Мишень: {group.primaryTarget}
+                  <p className="font-mono text-xs text-teal-700 dark:text-teal-400">
+                    Первичная мишень: {group.primaryTarget}
                   </p>
                 </div>
 
@@ -113,9 +113,9 @@ function GroupsDirectoryContent() {
                       : `Добавить группу «${group.name}» в избранное`
                   }
                   className={cn(
-                    "rounded p-1 transition-colors",
+                    "rounded-md p-1.5 transition-colors",
                     saved
-                      ? "text-teal-700 dark:text-teal-300"
+                      ? "text-teal-600 dark:text-teal-400"
                       : "text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
                   )}
                 >
@@ -126,13 +126,17 @@ function GroupsDirectoryContent() {
                 </button>
               </div>
 
-              <p className="mt-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              <p className="mt-2.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
                 {group.mechanismSummary}
               </p>
 
-              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  Препараты в демо-каталоге:
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                {group.clinicalOverview}
+              </p>
+
+              <div className="mt-3.5 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                  Препараты группы:
                 </span>
                 {memberDrugs.map((drug) => (
                   <Link
@@ -148,7 +152,7 @@ function GroupsDirectoryContent() {
                         timestampLabel: `Открыто из группы «${group.name}»`,
                       })
                     }
-                    className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-800 hover:border-teal-400 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-teal-600"
+                    className="inline-flex items-center rounded-lg border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:border-teal-500/40 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:text-teal-300"
                   >
                     {drug.genericName}
                   </Link>
@@ -164,16 +168,16 @@ function GroupsDirectoryContent() {
 
 export default function PharmacologyGroupsPage() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <MilestoneBanner
         sectionTitle="Фармакологические группы"
-        milestoneTarget="6 демо-классов"
-        purposeDescription="Классификация по системам органов, рецепторным мишеням и механизмам действия."
+        milestoneTarget="6 классов • Demo"
+        purposeDescription="Системная классификация лекарственных средств по органам-мишеням, рецепторам и ферментативным каскадам."
       />
 
       <Suspense
         fallback={
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
             Загрузка фармакологических групп...
           </div>
         }

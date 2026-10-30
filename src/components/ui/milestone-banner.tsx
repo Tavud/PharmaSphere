@@ -11,8 +11,7 @@ interface MilestoneBannerProps {
 }
 
 /**
- * Компактная шапка раздела для внутренних страниц приложения.
- * Позволяет сразу отображать рабочие таблицы и списки на первом экране без лишней высоты.
+ * Единая шапка разделов приложения в стиле современного медицинского SaaS.
  */
 export function MilestoneBanner({
   sectionTitle,
@@ -23,23 +22,25 @@ export function MilestoneBanner({
   return (
     <header
       aria-label={`Раздел: ${sectionTitle}`}
-      className="flex flex-col justify-between gap-3 border-b border-slate-200/80 pb-3.5 sm:flex-row sm:items-center dark:border-slate-800"
+      className="flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-center dark:border-slate-800/80"
     >
-      <div className="space-y-0.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-[22px] font-semibold tracking-tight text-slate-900 dark:text-white">
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
             {sectionTitle}
           </h1>
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-[11px]">
             {milestoneTarget}
           </Badge>
         </div>
-        <p className="max-w-3xl text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="max-w-2xl text-[13px] text-slate-500 dark:text-slate-400">
           {purposeDescription}
         </p>
       </div>
 
-      {rightSlot && <div className="flex shrink-0 items-center gap-2">{rightSlot}</div>}
+      {rightSlot && (
+        <div className="flex shrink-0 items-center gap-2">{rightSlot}</div>
+      )}
     </header>
   );
 }

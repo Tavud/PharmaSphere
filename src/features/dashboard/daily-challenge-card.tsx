@@ -2,7 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, RotateCcw, Shuffle, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  Shuffle,
+  XCircle,
+} from "lucide-react";
 import { getAllQuizQuestions, getDrugById } from "@/lib/data-service";
 import { useAppState } from "@/features/preferences/app-state-context";
 import {
@@ -22,7 +28,6 @@ export function DailyChallengeCard() {
     progress,
     submitChallengeAnswer,
     setActiveChallengeQuestion,
-    resetChallengeDemo,
   } = useAppState();
 
   const currentQuestionIndex = Math.max(
@@ -62,29 +67,34 @@ export function DailyChallengeCard() {
 
   return (
     <Card id="daily-challenge" className="flex flex-col">
-      <CardHeader className="bg-slate-900 text-white py-2.5 px-4 rounded-t-lg border-b border-slate-800">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-white text-[14px]">
-            Вопрос дня по фармакологии
-          </CardTitle>
-          <div className="flex items-center gap-1.5">
-            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-teal-300 border border-slate-700">
-              {currentQuestionIndex + 1}/{questions.length}
-            </span>
-            <Badge variant="amber" className="text-[10px]">
-              Демо
-            </Badge>
-          </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck
+            className="h-4 w-4 text-teal-600 dark:text-teal-400"
+            aria-hidden="true"
+          />
+          <CardTitle>Вопрос дня</CardTitle>
         </div>
-        <p className="text-[11px] text-slate-300 truncate">
-          {currentQuestion.title} • {currentQuestion.organSystem}
-        </p>
+
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {currentQuestionIndex + 1} / {questions.length}
+          </Badge>
+          <Badge variant="teal" className="text-[10px]">
+            Demo
+          </Badge>
+        </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-3.5 space-y-3">
-        <p className="text-[13px] leading-relaxed text-slate-800 dark:text-slate-200">
-          {currentQuestion.stem}
-        </p>
+      <CardContent className="flex-1 space-y-3.5">
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-teal-700 dark:text-teal-400">
+            {currentQuestion.title}
+          </p>
+          <p className="text-[13px] leading-relaxed text-slate-800 dark:text-slate-200">
+            {currentQuestion.stem}
+          </p>
+        </div>
 
         <div
           role="radiogroup"
@@ -97,18 +107,18 @@ export function DailyChallengeCard() {
               option.id === currentQuestion.correctOptionId;
 
             let optionStateStyles =
-              "border-slate-200 bg-white hover:border-teal-500 hover:bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-teal-500";
+              "border-slate-200/90 bg-white hover:border-teal-500/60 hover:bg-slate-50/70 text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-teal-500/60";
 
             if (isAnswered) {
               if (isCorrectOption) {
                 optionStateStyles =
-                  "border-emerald-500/80 bg-emerald-50/70 text-emerald-950 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-100";
+                  "border-emerald-500/80 bg-emerald-50/60 text-emerald-950 dark:border-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-100";
               } else if (isSelected && !isCorrectOption) {
                 optionStateStyles =
-                  "border-rose-400 bg-rose-50/70 text-rose-950 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-100";
+                  "border-rose-400 bg-rose-50/60 text-rose-950 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-100";
               } else {
                 optionStateStyles =
-                  "border-slate-200/60 bg-slate-50/40 text-slate-400 opacity-75 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-500";
+                  "border-slate-200/50 bg-slate-50/40 text-slate-400 opacity-75 dark:border-slate-800/60 dark:bg-slate-900/30 dark:text-slate-500";
               }
             }
 
@@ -121,7 +131,7 @@ export function DailyChallengeCard() {
                 disabled={isAnswered}
                 onClick={() => handleSelectOption(option.id)}
                 className={cn(
-                  "flex w-full items-start gap-2.5 rounded-md border px-2.5 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-default",
+                  "flex w-full items-start gap-2.5 rounded-lg border px-3 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-default",
                   optionStateStyles
                 )}
               >
@@ -160,39 +170,23 @@ export function DailyChallengeCard() {
         {isAnswered && answeredRecord && (
           <div
             role="region"
-            aria-label="Разбор ответа на вопрос дня"
-            className={cn(
-              "rounded-md border p-2.5 space-y-1.5 text-xs leading-normal",
-              answeredRecord.isCorrect
-                ? "border-emerald-200 bg-emerald-50/60 text-slate-800 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-slate-200"
-                : "border-amber-200 bg-amber-50/60 text-slate-800 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-slate-200"
-            )}
+            aria-label="Разбор ответа"
+            className="rounded-lg border border-slate-200/80 bg-slate-50/80 p-3 space-y-1.5 text-xs dark:border-slate-800 dark:bg-slate-800/40"
           >
-            <div className="flex items-center justify-between gap-2 font-semibold">
-              <span>
-                {answeredRecord.isCorrect
-                  ? `Верно (вариант ${currentQuestion.correctOptionId})`
-                  : `Неверно (выбрано ${answeredRecord.selectedOptionId}, верно — ${currentQuestion.correctOptionId})`}
-              </span>
-              <span className="text-[10px] font-normal text-slate-500">
-                Ответ заблокирован
-              </span>
-            </div>
-
-            <p className="text-[12px] text-slate-700 dark:text-slate-300">
+            <p className="font-semibold text-slate-900 dark:text-white">
+              {answeredRecord.isCorrect
+                ? `Верно (вариант ${currentQuestion.correctOptionId})`
+                : `Неверно (правильный ответ — ${currentQuestion.correctOptionId})`}
+            </p>
+            <p className="leading-relaxed text-slate-600 dark:text-slate-300">
               {currentQuestion.conciseExplanation}
             </p>
-
-            <p className="font-mono text-[11px] font-medium text-teal-800 dark:text-teal-300">
-              {currentQuestion.mechanismTakeaway}
-            </p>
-
             {relatedDrug && (
-              <p className="text-[11px] text-slate-500">
-                Препарат:{" "}
+              <p className="pt-0.5 text-[11px] text-slate-500">
+                Связанный препарат:{" "}
                 <Link
                   href={`/app/drugs/${relatedDrug.id}`}
-                  className="font-semibold text-teal-700 underline hover:text-teal-800 dark:text-teal-400"
+                  className="font-semibold text-teal-700 hover:underline dark:text-teal-400"
                 >
                   {relatedDrug.genericName}
                 </Link>
@@ -202,29 +196,27 @@ export function DailyChallengeCard() {
         )}
       </CardContent>
 
-      <CardFooter className="bg-slate-50/60 py-2 px-3.5 dark:bg-slate-900/40">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleNextQuestion}
-          aria-label="Переключить на другой демо-вопрос по фармакологии"
-        >
-          <Shuffle
-            className="h-3 w-3 text-teal-600 dark:text-teal-400"
-            aria-hidden="true"
-          />
-          <span>Другой вопрос</span>
-        </Button>
-
+      <CardFooter className="bg-slate-50/50 dark:bg-slate-900/40">
         <Button
           variant="ghost"
           size="sm"
-          onClick={resetChallengeDemo}
-          aria-label="Сбросить состояние демонстрационного вопроса дня"
+          onClick={handleNextQuestion}
+          aria-label="Следующий вопрос"
         >
-          <RotateCcw className="h-3 w-3" aria-hidden="true" />
-          <span>Сбросить</span>
+          <Shuffle
+            className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400"
+            aria-hidden="true"
+          />
+          <span>Сменить вопрос</span>
         </Button>
+
+        <Link
+          href="/app/quiz"
+          className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400"
+        >
+          <span>Все тесты</span>
+          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+        </Link>
       </CardFooter>
     </Card>
   );

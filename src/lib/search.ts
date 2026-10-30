@@ -12,8 +12,8 @@ interface ScoredSearchResult {
 
 /**
  * Поисковый движок по демонстрационному каталогу фармакологии.
- * - Ищет по русским и международным названиям (МНН), синонимам, классам,
- *   рецепторным мишеням и фармакологическим группам.
+ * - Ищет по русским и международным названиям (МНН), торговым названиям, синонимам,
+ *   классам, рецепторным мишеням и фармакологическим группам.
  * - Нечувствителен к регистру и поддерживает частичные совпадения.
  * - Ранжирует точные и префиксные совпадения выше внутренних подстрок.
  */
@@ -34,6 +34,9 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
     const classLower = drug.pharmacologicalClass.toLowerCase();
     const groupNameLower = parentGroup ? parentGroup.name.toLowerCase() : "";
     const groupShortLower = parentGroup ? parentGroup.shortName.toLowerCase() : "";
+    const tradeMatch = drug.tradeNames.find((tn) =>
+      tn.toLowerCase().includes(normalizedQuery)
+    );
     const aliasMatch = drug.commonReferenceAliases.find((alias) =>
       alias.toLowerCase().includes(normalizedQuery)
     );
@@ -54,6 +57,9 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
     } else if (genericLower.includes(normalizedQuery)) {
       score = 80;
       matchedField = "МНН препарата";
+    } else if (tradeMatch) {
+      score = 78;
+      matchedField = `Торговое название (${tradeMatch})`;
     } else if (aliasMatch) {
       score = 75;
       matchedField = `Синоним / форма (${aliasMatch})`;
@@ -76,7 +82,7 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
           id: `search-drug-${drug.id}`,
           category: "drug",
           title: drug.genericName,
-          subtitle: drug.pharmacologicalClass,
+          subtitle: `${drug.pharmacologicalClass} • ${drug.tradeNames.join(", ")}`,
           badgeText: drug.organSystem,
           description: drug.shortDescription,
           matchedField,
@@ -136,7 +142,11 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
   }
 
   return scoredResults
-    .sort((a, b) => b.score - a.score || a.result.title.localeCompare(b.result.title, "ru"))
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.result.title.localeCompare(b.result.title, "ru")
+    )
     .map((entry) => entry.result);
 }
 
@@ -152,7 +162,7 @@ export function getQuickSearchSuggestions(): SearchResult[] {
       id: `suggest-drug-${drug.id}`,
       category: "drug" as const,
       title: drug.genericName,
-      subtitle: drug.pharmacologicalClass,
+      subtitle: `${drug.pharmacologicalClass} • ${drug.tradeNames.join(", ")}`,
       badgeText: drug.organSystem,
       description: drug.shortDescription,
       matchedField: "Популярный препарат",

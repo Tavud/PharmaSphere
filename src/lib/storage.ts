@@ -137,11 +137,11 @@ function localizeLegacyLabel(rawLabel: string): string {
 }
 
 function normalizeAppHref(rawHref: string): string {
-  if (rawHref === "/#daily-challenge") {
-    return "/app#daily-challenge";
+  if (rawHref === "/#daily-challenge" || rawHref === "/app#daily-challenge") {
+    return "/app/quiz";
   }
   if (
-    /^\/(drugs|groups|learning|progress|favorites|settings)(\/|\?|$|#)/.test(
+    /^\/(drugs|groups|learning|quiz|progress|favorites|settings)(\/|\?|$|#)/.test(
       rawHref
     )
   ) {

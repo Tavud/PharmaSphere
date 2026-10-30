@@ -17,6 +17,17 @@ import { Button } from "@/components/ui/button";
 import { DemoDisclaimer } from "@/components/ui/demo-disclaimer";
 import { cn } from "@/lib/utils";
 
+const MONOGRAPH_SECTIONS = [
+  { id: "mechanism", label: "1. Механизм действия" },
+  { id: "pharmacodynamics", label: "2. Фармакодинамика" },
+  { id: "pharmacokinetics", label: "3. Фармакокинетика" },
+  { id: "indications", label: "4. Показания" },
+  { id: "contraindications", label: "5. Противопоказания" },
+  { id: "adverse-effects", label: "6. Побочные эффекты" },
+  { id: "interactions", label: "7. Взаимодействия" },
+  { id: "special-notes", label: "8. Особенности применения" },
+] as const;
+
 export default function DrugDetailPage() {
   const params = useParams<{ id: string }>();
   const drugId = typeof params?.id === "string" ? params.id : "";
@@ -37,7 +48,7 @@ export default function DrugDetailPage() {
 
   if (!drug) {
     return (
-      <Card className="p-6 text-center space-y-3">
+      <Card className="p-8 text-center space-y-3">
         <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
           Карточка препарата не найдена
         </h1>
@@ -47,10 +58,10 @@ export default function DrugDetailPage() {
         <div className="pt-1">
           <Link
             href="/app/drugs"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-teal-600 px-3 text-xs font-medium text-white hover:bg-teal-700"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-xs font-medium text-white hover:bg-teal-700"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Вернуться в справочник</span>
+            <span>Вернуться в каталог препаратов</span>
           </Link>
         </div>
       </Card>
@@ -61,43 +72,61 @@ export default function DrugDetailPage() {
   const saved = isFavorite(drug.id);
 
   return (
-    <div className="space-y-4">
-      {/* Компактная навигационная полоса */}
+    <div className="space-y-6">
+      {/* Навигационная строка возврата */}
       <div className="flex items-center justify-between gap-2">
         <Link
           href="/app/drugs"
-          className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>Справочник препаратов</span>
+          <span>Каталог препаратов</span>
         </Link>
 
-        <Badge variant="amber" className="text-[10px]">
-          Демо-монография
+        <Badge variant="outline" className="text-[11px]">
+          Клиническая монография • Demo
         </Badge>
       </div>
 
-      {/* Компактная шапка монографии + таблица базовых параметров */}
-      <Card>
-        <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-start dark:border-slate-800">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-1.5">
+      {/* Верхняя часть: МНН, торговые названия, фармгруппа и краткая информация */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:p-6 dark:border-slate-800/80">
+          <div className="space-y-2 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="teal">{drug.organSystem}</Badge>
-              <span className="font-mono text-[11px] text-slate-400">
-                {drug.id}
-              </span>
+              {parentGroup && (
+                <Link
+                  href={`/app/groups?group=${parentGroup.id}`}
+                  className="text-xs font-medium text-teal-700 hover:underline dark:text-teal-400"
+                >
+                  {parentGroup.name}
+                </Link>
+              )}
             </div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-slate-900 dark:text-white">
+
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white">
               {drug.genericName}
             </h1>
-            <p className="text-xs font-medium text-teal-700 dark:text-teal-400">
-              {drug.pharmacologicalClass}
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+              <span>
+                <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                  Торговые названия:
+                </strong>{" "}
+                {drug.tradeNames.join(", ")}
+              </span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
+              <span>
+                <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                  Класс:
+                </strong>{" "}
+                {drug.pharmacologicalClass}
+              </span>
+            </div>
+
+            <p className="pt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+              {drug.shortDescription}
             </p>
-            {drug.commonReferenceAliases.length > 0 && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Формы и синонимы: {drug.commonReferenceAliases.join(", ")}
-              </p>
-            )}
           </div>
 
           <Button
@@ -112,6 +141,7 @@ export default function DrugDetailPage() {
                 href: `/app/drugs/${drug.id}`,
               })
             }
+            className="shrink-0"
           >
             <Bookmark
               className={cn(
@@ -124,35 +154,19 @@ export default function DrugDetailPage() {
           </Button>
         </div>
 
-        {/* Сводная таблица параметров (Мишень, Группа, Введение, T½) */}
-        <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0 dark:divide-slate-800">
-          <div className="px-4 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Первичная мишень
+        {/* Сводка ключевых молекулярных и ФК-параметров */}
+        <div className="grid grid-cols-1 divide-y divide-slate-100 bg-slate-50/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-slate-800/80 dark:bg-slate-900/50">
+          <div className="px-5 py-3">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              Первичная молекулярная мишень
             </p>
             <p className="mt-0.5 font-mono text-xs font-medium text-slate-900 dark:text-slate-100">
               {drug.primaryTarget}
             </p>
           </div>
 
-          <div className="px-4 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Фармакологическая группа
-            </p>
-            {parentGroup ? (
-              <Link
-                href={`/app/groups?group=${parentGroup.id}`}
-                className="mt-0.5 block text-xs font-medium text-teal-700 hover:underline dark:text-teal-400"
-              >
-                {parentGroup.name}
-              </Link>
-            ) : (
-              <p className="mt-0.5 text-xs text-slate-700">—</p>
-            )}
-          </div>
-
-          <div className="px-4 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="px-5 py-3">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
               Пути введения
             </p>
             <p className="mt-0.5 text-xs text-slate-800 dark:text-slate-200">
@@ -160,8 +174,8 @@ export default function DrugDetailPage() {
             </p>
           </div>
 
-          <div className="px-4 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="px-5 py-3">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
               Период полувыведения (T½)
             </p>
             <p className="mt-0.5 font-mono text-xs text-slate-800 dark:text-slate-200">
@@ -171,50 +185,102 @@ export default function DrugDetailPage() {
         </div>
       </Card>
 
-      {/* Механизм действия и клинико-фармакологические особенности */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
+      {/* Быстрая навигация по 8 разделам монографии */}
+      <nav
+        aria-label="Оглавление монографии препарата"
+        className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white p-2.5 dark:border-slate-800/80 dark:bg-slate-900"
+      >
+        {MONOGRAPH_SECTIONS.map((sec) => (
+          <a
+            key={sec.id}
+            href={`#${sec.id}`}
+            className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-teal-50 hover:text-teal-800 dark:text-slate-400 dark:hover:bg-teal-950/50 dark:hover:text-teal-300"
+          >
+            {sec.label}
+          </a>
+        ))}
+      </nav>
+
+      {/* Разделы 1 и 2: Механизм действия и Фармакодинамика */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card id="mechanism" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>Механизм действия и фармакодинамика</CardTitle>
+            <CardTitle>1. Механизм действия</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
             <p>{drug.mechanismOfAction}</p>
-            <div className="rounded-md border border-teal-200/70 bg-teal-50/40 p-3 text-xs text-slate-800 dark:border-teal-900/60 dark:bg-teal-950/30 dark:text-slate-200">
-              <span className="font-semibold text-teal-900 dark:text-teal-300">
+            <div className="rounded-lg border border-teal-200/70 bg-teal-50/40 p-3 text-xs text-slate-700 dark:border-teal-900/50 dark:bg-teal-950/30 dark:text-slate-300">
+              <strong className="font-semibold text-teal-900 dark:text-teal-300">
                 Клинический акцент:{" "}
-              </span>
+              </strong>
               {drug.educationalSummary}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-5">
+        <Card id="pharmacodynamics" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>Элиминация и метаболизм</CardTitle>
+            <CardTitle>2. Фармакодинамика</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
-            <p className="leading-relaxed">
-              {drug.keyPharmacokinetics.eliminationSummary}
-            </p>
-            <div className="border-t border-slate-100 pt-2.5 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              Краткое резюме: {drug.shortDescription}
-            </div>
+          <CardContent className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
+            <p>{drug.pharmacodynamics}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Показания, побочные эффекты и противопоказания */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
+      {/* Раздел 3: Фармакокинетика */}
+      <Card id="pharmacokinetics" className="scroll-mt-20">
+        <CardHeader>
+          <CardTitle>3. Фармакокинетика (ADME)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 text-xs">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Всасывание и распределение
+              </p>
+              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
+                {drug.keyPharmacokinetics.absorptionAndDistribution}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Метаболизм и элиминация
+              </p>
+              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
+                {drug.keyPharmacokinetics.eliminationSummary}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Пути введения и T½
+              </p>
+              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
+                {drug.keyPharmacokinetics.routeSummary}. Период полувыведения:{" "}
+                <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                  {drug.keyPharmacokinetics.halfLifeRange}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Разделы 4, 5 и 6: Показания, Противопоказания, Побочные эффекты */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card id="indications" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>Классические показания</CardTitle>
+            <CardTitle>4. Показания к применению</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
               {drug.classicIndications.map((ind) => (
                 <li key={ind} className="flex items-start gap-2">
                   <span
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-600"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
                     aria-hidden="true"
                   />
                   <span>{ind}</span>
@@ -224,16 +290,35 @@ export default function DrugDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="contraindications" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>Нежелательные реакции</CardTitle>
+            <CardTitle>5. Противопоказания</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              {drug.contraindicationNotes.map((note) => (
+                <li key={note} className="flex items-start gap-2">
+                  <span
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500"
+                    aria-hidden="true"
+                  />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card id="adverse-effects" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle>6. Побочные эффекты</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
               {drug.highYieldAdverseEffects.map((adv) => (
                 <li key={adv} className="flex items-start gap-2">
                   <span
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
                     aria-hidden="true"
                   />
                   <span>{adv}</span>
@@ -242,20 +327,42 @@ export default function DrugDetailPage() {
             </ul>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
+      {/* Разделы 7 и 8: Лекарственные взаимодействия и Особенности применения */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card id="interactions" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>Противопоказания</CardTitle>
+            <CardTitle>7. Лекарственные взаимодействия</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-              {drug.contraindicationNotes.map((note) => (
-                <li key={note} className="flex items-start gap-2">
+            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              {drug.drugInteractions.map((inter) => (
+                <li key={inter} className="flex items-start gap-2">
                   <span
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-500"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
                     aria-hidden="true"
                   />
-                  <span>{note}</span>
+                  <span>{inter}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card id="special-notes" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle>8. Особенности клинического применения</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+              {drug.specialConsiderations.map((spec) => (
+                <li key={spec} className="flex items-start gap-2">
+                  <span
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
+                    aria-hidden="true"
+                  />
+                  <span>{spec}</span>
                 </li>
               ))}
             </ul>
