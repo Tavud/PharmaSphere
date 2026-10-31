@@ -21,8 +21,8 @@ export function OverviewDashboard() {
         <div className="max-w-2xl space-y-1.5">
           <p className="text-xs font-medium text-teal-700 dark:text-teal-400">
             {customName
-              ? `Добро пожаловать, ${customName}`
-              : "Добро пожаловать в PharmaSphere"}
+              ? `Добро пожаловать, ${customName} • ${preferences.studyTrackLabel}`
+              : `Добро пожаловать в PharmaSphere • ${preferences.studyTrackLabel}`}
           </p>
           <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white">
             Рабочее пространство

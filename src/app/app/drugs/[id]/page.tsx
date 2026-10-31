@@ -3,8 +3,12 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Bookmark } from "lucide-react";
-import { getDrugById, getPharmacologicalGroupById } from "@/lib/data-service";
+import { ArrowLeft, Bookmark, Layers, Pill } from "lucide-react";
+import {
+  getDrugById,
+  getDrugsByGroupId,
+  getPharmacologicalGroupById,
+} from "@/lib/data-service";
 import { useAppState } from "@/features/preferences/app-state-context";
 import {
   Card,
@@ -20,7 +24,7 @@ import { cn } from "@/lib/utils";
 const MONOGRAPH_SECTIONS = [
   { id: "mechanism", label: "1. Механизм действия" },
   { id: "pharmacodynamics", label: "2. Фармакодинамика" },
-  { id: "pharmacokinetics", label: "3. Фармакокинетика" },
+  { id: "pharmacokinetics", label: "3. Фармакокинетика и дозирование" },
   { id: "indications", label: "4. Показания" },
   { id: "contraindications", label: "5. Противопоказания" },
   { id: "adverse-effects", label: "6. Побочные эффекты" },
@@ -32,7 +36,8 @@ export default function DrugDetailPage() {
   const params = useParams<{ id: string }>();
   const drugId = typeof params?.id === "string" ? params.id : "";
   const drug = getDrugById(drugId);
-  const { isFavorite, toggleFavorite, recordStudyActivity } = useAppState();
+  const { isFavorite, toggleFavorite, recordStudyActivity, preferences } =
+    useAppState();
 
   useEffect(() => {
     if (!drug) return;
@@ -69,12 +74,15 @@ export default function DrugDetailPage() {
   }
 
   const parentGroup = getPharmacologicalGroupById(drug.groupId);
+  const peerDrugs = getDrugsByGroupId(drug.groupId).filter(
+    (d) => d.id !== drug.id
+  );
   const saved = isFavorite(drug.id);
 
   return (
     <div className="space-y-6">
       {/* Навигационная строка возврата */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/app/drugs"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400"
@@ -88,7 +96,7 @@ export default function DrugDetailPage() {
         </Badge>
       </div>
 
-      {/* Верхняя часть: МНН, торговые названия, фармгруппа и краткая информация */}
+      {/* Верхняя часть: МНН, торговые названия, фармгруппа и краткая характеристика */}
       <Card className="overflow-hidden">
         <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:p-6 dark:border-slate-800/80">
           <div className="space-y-2 max-w-3xl">
@@ -97,9 +105,10 @@ export default function DrugDetailPage() {
               {parentGroup && (
                 <Link
                   href={`/app/groups?group=${parentGroup.id}`}
-                  className="text-xs font-medium text-teal-700 hover:underline dark:text-teal-400"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:underline dark:text-teal-400"
                 >
-                  {parentGroup.name}
+                  <Layers className="h-3 w-3" aria-hidden="true" />
+                  <span>{parentGroup.name}</span>
                 </Link>
               )}
             </div>
@@ -113,7 +122,9 @@ export default function DrugDetailPage() {
                 <strong className="font-semibold text-slate-800 dark:text-slate-200">
                   Торговые названия:
                 </strong>{" "}
-                {drug.tradeNames.join(", ")}
+                {drug.tradeNames.length > 0
+                  ? drug.tradeNames.join(", ")
+                  : "Не указаны"}
               </span>
               <span className="text-slate-300 dark:text-slate-700">•</span>
               <span>
@@ -208,13 +219,15 @@ export default function DrugDetailPage() {
             <CardTitle>1. Механизм действия</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
-            <p>{drug.mechanismOfAction}</p>
-            <div className="rounded-lg border border-teal-200/70 bg-teal-50/40 p-3 text-xs text-slate-700 dark:border-teal-900/50 dark:bg-teal-950/30 dark:text-slate-300">
-              <strong className="font-semibold text-teal-900 dark:text-teal-300">
-                Клинический акцент:{" "}
-              </strong>
-              {drug.educationalSummary}
-            </div>
+            <p>{drug.mechanismOfAction || "Раздел пока не заполнен."}</p>
+            {preferences.showClinicalMnemonics && drug.educationalSummary && (
+              <div className="rounded-lg border border-teal-200/70 bg-teal-50/40 p-3 text-xs text-slate-700 dark:border-teal-900/50 dark:bg-teal-950/30 dark:text-slate-300">
+                <strong className="font-semibold text-teal-900 dark:text-teal-300">
+                  Клинический акцент:{" "}
+                </strong>
+                {drug.educationalSummary}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -223,50 +236,68 @@ export default function DrugDetailPage() {
             <CardTitle>2. Фармакодинамика</CardTitle>
           </CardHeader>
           <CardContent className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
-            <p>{drug.pharmacodynamics}</p>
+            <p>{drug.pharmacodynamics || "Раздел пока не заполнен."}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Раздел 3: Фармакокинетика */}
-      <Card id="pharmacokinetics" className="scroll-mt-20">
+      {/* Раздел 3: Фармакокинетика, метаболизм, выведение и ориентировочные дозировки */}
+      <Card id="pharmacokinetics" className="scroll-mt-20 overflow-hidden">
         <CardHeader>
-          <CardTitle>3. Фармакокинетика (ADME)</CardTitle>
+          <CardTitle>
+            3. Фармакокинетика (ADME) и учебный режим дозирования
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 text-xs">
-            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
-              <p className="font-semibold text-slate-900 dark:text-white">
-                Всасывание и распределение
-              </p>
-              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
-                {drug.keyPharmacokinetics.absorptionAndDistribution}
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
-              <p className="font-semibold text-slate-900 dark:text-white">
-                Метаболизм и элиминация
-              </p>
-              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
-                {drug.keyPharmacokinetics.eliminationSummary}
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
-              <p className="font-semibold text-slate-900 dark:text-white">
-                Пути введения и T½
-              </p>
-              <p className="leading-relaxed text-slate-600 dark:text-slate-300">
-                {drug.keyPharmacokinetics.routeSummary}. Период полувыведения:{" "}
-                <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
-                  {drug.keyPharmacokinetics.halfLifeRange}
-                </span>
-                .
-              </p>
-            </div>
+        <div className="divide-y divide-slate-100 text-xs dark:divide-slate-800/80">
+          <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-12 sm:gap-4">
+            <span className="font-semibold text-slate-700 sm:col-span-4 dark:text-slate-300">
+              Пути введения
+            </span>
+            <span className="text-slate-600 sm:col-span-8 dark:text-slate-300">
+              {drug.keyPharmacokinetics.routeSummary ||
+                "Раздел пока не заполнен."}
+            </span>
           </div>
-        </CardContent>
+
+          <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-12 sm:gap-4">
+            <span className="font-semibold text-slate-700 sm:col-span-4 dark:text-slate-300">
+              Всасывание и распределение
+            </span>
+            <span className="leading-relaxed text-slate-600 sm:col-span-8 dark:text-slate-300">
+              {drug.keyPharmacokinetics.absorptionAndDistribution ||
+                "Раздел пока не заполнен."}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-12 sm:gap-4">
+            <span className="font-semibold text-slate-700 sm:col-span-4 dark:text-slate-300">
+              Метаболизм и выведение
+            </span>
+            <span className="leading-relaxed text-slate-600 sm:col-span-8 dark:text-slate-300">
+              {drug.keyPharmacokinetics.eliminationSummary ||
+                "Раздел пока не заполнен."}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-12 sm:gap-4">
+            <span className="font-semibold text-slate-700 sm:col-span-4 dark:text-slate-300">
+              Период полувыведения (T½)
+            </span>
+            <span className="font-mono text-slate-800 sm:col-span-8 dark:text-slate-200">
+              {drug.keyPharmacokinetics.halfLifeRange ||
+                "Раздел пока не заполнен."}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1 bg-slate-50/40 px-5 py-3 sm:grid-cols-12 sm:gap-4 dark:bg-slate-900/40">
+            <span className="font-semibold text-slate-700 sm:col-span-4 dark:text-slate-300">
+              Ориентировочный режим дозирования (учебный справочник)
+            </span>
+            <span className="leading-relaxed text-slate-600 sm:col-span-8 dark:text-slate-300">
+              {drug.dosingSummary || "Раздел пока не заполнен."}
+            </span>
+          </div>
+        </div>
       </Card>
 
       {/* Разделы 4, 5 и 6: Показания, Противопоказания, Побочные эффекты */}
@@ -276,17 +307,21 @@ export default function DrugDetailPage() {
             <CardTitle>4. Показания к применению</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-              {drug.classicIndications.map((ind) => (
-                <li key={ind} className="flex items-start gap-2">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
-                    aria-hidden="true"
-                  />
-                  <span>{ind}</span>
-                </li>
-              ))}
-            </ul>
+            {drug.classicIndications.length === 0 ? (
+              <p className="text-xs text-slate-400">Раздел пока не заполнен.</p>
+            ) : (
+              <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {drug.classicIndications.map((ind) => (
+                  <li key={ind} className="flex items-start gap-2">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
+                      aria-hidden="true"
+                    />
+                    <span>{ind}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
@@ -295,17 +330,21 @@ export default function DrugDetailPage() {
             <CardTitle>5. Противопоказания</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-              {drug.contraindicationNotes.map((note) => (
-                <li key={note} className="flex items-start gap-2">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500"
-                    aria-hidden="true"
-                  />
-                  <span>{note}</span>
-                </li>
-              ))}
-            </ul>
+            {drug.contraindicationNotes.length === 0 ? (
+              <p className="text-xs text-slate-400">Раздел пока не заполнен.</p>
+            ) : (
+              <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {drug.contraindicationNotes.map((note) => (
+                  <li key={note} className="flex items-start gap-2">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500"
+                      aria-hidden="true"
+                    />
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
@@ -314,17 +353,21 @@ export default function DrugDetailPage() {
             <CardTitle>6. Побочные эффекты</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-              {drug.highYieldAdverseEffects.map((adv) => (
-                <li key={adv} className="flex items-start gap-2">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
-                    aria-hidden="true"
-                  />
-                  <span>{adv}</span>
-                </li>
-              ))}
-            </ul>
+            {drug.highYieldAdverseEffects.length === 0 ? (
+              <p className="text-xs text-slate-400">Раздел пока не заполнен.</p>
+            ) : (
+              <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {drug.highYieldAdverseEffects.map((adv) => (
+                  <li key={adv} className="flex items-start gap-2">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                      aria-hidden="true"
+                    />
+                    <span>{adv}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -336,39 +379,88 @@ export default function DrugDetailPage() {
             <CardTitle>7. Лекарственные взаимодействия</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-              {drug.drugInteractions.map((inter) => (
-                <li key={inter} className="flex items-start gap-2">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
-                    aria-hidden="true"
-                  />
-                  <span>{inter}</span>
-                </li>
-              ))}
-            </ul>
+            {drug.drugInteractions.length === 0 ? (
+              <p className="text-xs text-slate-400">Раздел пока не заполнен.</p>
+            ) : (
+              <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {drug.drugInteractions.map((inter) => (
+                  <li key={inter} className="flex items-start gap-2">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400"
+                      aria-hidden="true"
+                    />
+                    <span>{inter}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
         <Card id="special-notes" className="scroll-mt-20">
           <CardHeader>
-            <CardTitle>8. Особенности клинического применения</CardTitle>
+            <CardTitle>
+              8. Особенности применения и мониторинг безопасности
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-              {drug.specialConsiderations.map((spec) => (
-                <li key={spec} className="flex items-start gap-2">
-                  <span
-                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
-                    aria-hidden="true"
-                  />
-                  <span>{spec}</span>
-                </li>
-              ))}
-            </ul>
+            {drug.specialConsiderations.length === 0 ? (
+              <p className="text-xs text-slate-400">Раздел пока не заполнен.</p>
+            ) : (
+              <ul className="space-y-2 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {drug.specialConsiderations.map((spec) => (
+                  <li key={spec} className="flex items-start gap-2">
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600"
+                      aria-hidden="true"
+                    />
+                    <span>{spec}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Связанные препараты той же фармакологической группы */}
+      {parentGroup && (
+        <Card className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-medium text-slate-500 dark:text-slate-400">
+              Фармакологическая группа:
+            </span>
+            <Link
+              href={`/app/groups?group=${parentGroup.id}`}
+              className="font-semibold text-teal-700 hover:underline dark:text-teal-400"
+            >
+              {parentGroup.name}
+            </Link>
+
+            {peerDrugs.length > 0 && (
+              <>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Другие препараты группы:
+                </span>
+                {peerDrugs.map((peer) => (
+                  <Link
+                    key={peer.id}
+                    href={`/app/drugs/${peer.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-teal-500/40 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <Pill
+                      className="h-3 w-3 text-teal-600 dark:text-teal-400"
+                      aria-hidden="true"
+                    />
+                    <span>{peer.genericName}</span>
+                  </Link>
+                ))}
+              </>
+            )}
+          </div>
+        </Card>
+      )}
 
       <DemoDisclaimer />
     </div>

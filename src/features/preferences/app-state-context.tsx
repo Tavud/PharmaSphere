@@ -13,6 +13,8 @@ import {
   DEFAULT_DEMO_LEARNING_PROGRESS,
   DEFAULT_SAMPLE_RECENT_ITEMS,
   DEFAULT_USER_PREFERENCES,
+  DEMO_LEARNING_MODULES,
+  DEMO_QUIZ_QUESTIONS,
 } from "@/data/pharmacology-data";
 import {
   clearAllPrototypeStorage,
@@ -55,6 +57,12 @@ interface AppStateContextValue {
   toggleFavorite: (entry: Omit<FavoriteEntry, "id" | "addedAtIso">) => void;
   restoreDefaultFavorites: () => void;
   advanceModuleProgress: (moduleId: string, moduleTitle: string) => void;
+  toggleTopicCompletion: (
+    moduleId: string,
+    topicId: string,
+    topicTitle: string,
+    moduleTitle: string
+  ) => void;
   submitChallengeAnswer: (
     questionId: string,
     selectedOptionId: "A" | "B" | "C" | "D",
@@ -62,6 +70,7 @@ interface AppStateContextValue {
     questionTitle: string
   ) => void;
   setActiveChallengeQuestion: (questionId: string) => void;
+  restartQuizSession: () => void;
   resetChallengeDemo: () => void;
   recordStudyActivity: (params: {
     entityId: string;
@@ -228,7 +237,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         const deduplicated = prev.filter(
           (existing) => existing.entityId !== params.entityId
         );
-        const updated = [newItem, ...deduplicated].slice(0, 6);
+        const updated = [newItem, ...deduplicated].slice(0, 8);
         saveUserRecentActivity(updated);
         return updated;
       });
@@ -236,17 +245,87 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const advanceModuleProgress = useCallback(
-    (moduleId: string, moduleTitle: string) => {
+  const toggleTopicCompletion = useCallback(
+    (
+      moduleId: string,
+      topicId: string,
+      topicTitle: string,
+      moduleTitle: string
+    ) => {
+      const targetModule = DEMO_LEARNING_MODULES.find((m) => m.id === moduleId);
       setProgress((prev) => {
-        const currentPct = prev.moduleProgressMap[moduleId] ?? 0;
-        if (currentPct >= 100) {
-          return prev;
+        const alreadyCompleted = prev.completedTopicIds.includes(topicId);
+        const nextCompletedTopicIds = alreadyCompleted
+          ? prev.completedTopicIds.filter((id) => id !== topicId)
+          : [...prev.completedTopicIds, topicId];
+
+        let nextModulePct = prev.moduleProgressMap[moduleId] ?? 0;
+        if (targetModule && targetModule.topics.length > 0) {
+          const completedInMod = targetModule.topics.filter((t) =>
+            nextCompletedTopicIds.includes(t.id)
+          ).length;
+          nextModulePct = Math.round(
+            (completedInMod / targetModule.topics.length) * 100
+          );
         }
-        const nextPct = Math.min(100, currentPct + 15);
+
         const nextProgress: LearningProgress = {
           ...prev,
-          studyTopicsCompleted: prev.studyTopicsCompleted + 1,
+          studyTopicsCompleted: nextCompletedTopicIds.length,
+          completedTopicIds: nextCompletedTopicIds,
+          moduleProgressMap: {
+            ...prev.moduleProgressMap,
+            [moduleId]: nextModulePct,
+          },
+          isDemoBaseline: false,
+        };
+        saveLearningProgress(nextProgress);
+        return nextProgress;
+      });
+
+      recordStudyActivity({
+        entityId: moduleId,
+        itemType: "module",
+        title: `${moduleTitle} — ${topicTitle}`,
+        categoryLabel: "Учебный модуль",
+        href: `/app/learning?module=${moduleId}`,
+        timestampLabel: "Обновлен статус изучения темы",
+      });
+      notify(`Обновлен статус темы «${topicTitle}»`, "success");
+    },
+    [notify, recordStudyActivity]
+  );
+
+  const advanceModuleProgress = useCallback(
+    (moduleId: string, moduleTitle: string) => {
+      const targetModule = DEMO_LEARNING_MODULES.find((m) => m.id === moduleId);
+
+      setProgress((prev) => {
+        const nextCompletedIds = [...prev.completedTopicIds];
+        let nextPct = prev.moduleProgressMap[moduleId] ?? 0;
+
+        if (targetModule && targetModule.topics.length > 0) {
+          const nextUnfinished = targetModule.topics.find(
+            (t) => !nextCompletedIds.includes(t.id)
+          );
+          if (nextUnfinished) {
+            nextCompletedIds.push(nextUnfinished.id);
+          }
+          const completedInMod = targetModule.topics.filter((t) =>
+            nextCompletedIds.includes(t.id)
+          ).length;
+          nextPct = Math.round(
+            (completedInMod / targetModule.topics.length) * 100
+          );
+        } else {
+          if (nextPct >= 100) return prev;
+          nextPct = Math.min(100, nextPct + 25);
+        }
+
+        const nextProgress: LearningProgress = {
+          ...prev,
+          studyTopicsCompleted: nextCompletedIds.length,
+          completedTopicIds: nextCompletedIds,
           moduleProgressMap: {
             ...prev.moduleProgressMap,
             [moduleId]: nextPct,
@@ -289,20 +368,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           (nextCorrectCount / Math.max(1, nextQuestionsAnswered)) * 100
         );
 
+        const nextAnsweredChallenges = {
+          ...prev.answeredChallenges,
+          [questionId]: {
+            questionId,
+            selectedOptionId,
+            isCorrect,
+            answeredAtIso: new Date().toISOString(),
+          },
+        };
+
+        const isFullTestNowComplete =
+          Object.keys(nextAnsweredChallenges).length ===
+          DEMO_QUIZ_QUESTIONS.length;
+
         const nextProgress: LearningProgress = {
           ...prev,
           questionsAnswered: nextQuestionsAnswered,
           correctAnswersCount: nextCorrectCount,
           accuracyPercentage: nextAccuracy,
-          answeredChallenges: {
-            ...prev.answeredChallenges,
-            [questionId]: {
-              questionId,
-              selectedOptionId,
-              isCorrect,
-              answeredAtIso: new Date().toISOString(),
-            },
-          },
+          completedQuizzesCount: isFullTestNowComplete
+            ? prev.completedQuizzesCount + 1
+            : prev.completedQuizzesCount,
+          answeredChallenges: nextAnsweredChallenges,
           isDemoBaseline: false,
         };
         saveLearningProgress(nextProgress);
@@ -336,6 +424,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const restartQuizSession = useCallback(() => {
+    setProgress((prev) => {
+      const next: LearningProgress = {
+        ...prev,
+        answeredChallenges: {},
+        activeChallengeQuestionId:
+          DEMO_QUIZ_QUESTIONS[0]?.id ?? "quiz-acei-bradykinin",
+      };
+      saveLearningProgress(next);
+      return next;
+    });
+    notify("Текущая попытка тестирования сброшена для повторного прохождения", "info");
+  }, [notify]);
+
   const resetChallengeDemo = useCallback(() => {
     setProgress(() => {
       const resetState: LearningProgress = {
@@ -345,7 +447,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       return resetState;
     });
     notify(
-      "Вопрос дня и демо-статистика обучения сброшены к исходным значениям",
+      "Тестирование и демо-статистика обучения сброшены к исходным значениям",
       "info"
     );
   }, [notify]);
@@ -396,8 +498,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleFavorite,
       restoreDefaultFavorites,
       advanceModuleProgress,
+      toggleTopicCompletion,
       submitChallengeAnswer,
       setActiveChallengeQuestion,
+      restartQuizSession,
       resetChallengeDemo,
       recordStudyActivity,
       clearSessionHistory,
@@ -419,8 +523,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleFavorite,
       restoreDefaultFavorites,
       advanceModuleProgress,
+      toggleTopicCompletion,
       submitChallengeAnswer,
       setActiveChallengeQuestion,
+      restartQuizSession,
       resetChallengeDemo,
       recordStudyActivity,
       clearSessionHistory,

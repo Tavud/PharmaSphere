@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  Award,
   CheckCircle2,
   Pill,
   RotateCcw,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { DemoDisclaimer } from "@/components/ui/demo-disclaimer";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +35,10 @@ export default function QuizTestingPage() {
   const questions = getAllQuizQuestions();
   const {
     progress,
+    preferences,
     submitChallengeAnswer,
     setActiveChallengeQuestion,
-    resetChallengeDemo,
+    restartQuizSession,
   } = useAppState();
 
   const currentQuestionIndex = Math.max(
@@ -55,7 +58,15 @@ export default function QuizTestingPage() {
     currentQuestion.relatedGroupId
   );
 
-  const answeredCount = Object.keys(progress.answeredChallenges).length;
+  const answeredEntries = Object.values(progress.answeredChallenges);
+  const answeredCount = answeredEntries.length;
+  const sessionCorrectCount = answeredEntries.filter((r) => r.isCorrect).length;
+  const sessionIncorrectCount = answeredCount - sessionCorrectCount;
+  const sessionAccuracyPct =
+    answeredCount > 0
+      ? Math.round((sessionCorrectCount / answeredCount) * 100)
+      : 0;
+  const isAllQuestionsAnswered = answeredCount === questions.length;
 
   const handleSelectOption = (optionId: "A" | "B" | "C" | "D") => {
     if (isAnswered) return;
@@ -89,29 +100,29 @@ export default function QuizTestingPage() {
     <div className="space-y-6">
       <MilestoneBanner
         sectionTitle="Тестирование"
-        milestoneTarget={`Клинических задач: ${questions.length} • Demo`}
-        purposeDescription="Клинико-фармакологические ситуационные задачи с мгновенной проверкой ответа и разбором молекулярного механизма."
+        milestoneTarget={`Демо-задач: ${questions.length}`}
+        purposeDescription="Клинико-фармакологические ситуационные задачи (демонстрационный набор) с проверкой ответа, разбором механизма и подсчётом результата."
         rightSlot={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/app/progress"
               className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
-              Статистика ответов
+              Страница прогресса
             </Link>
-            <Button variant="outline" size="sm" onClick={resetChallengeDemo}>
+            <Button variant="outline" size="sm" onClick={restartQuizSession}>
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Сбросить тест</span>
+              <span>Пройти заново</span>
             </Button>
           </div>
         }
       />
 
-      {/* Навигатор по тестовым задачам */}
+      {/* Навигатор по тестовым задачам и счётчик текущей попытки */}
       <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-            Задачи:
+            Вопросы теста:
           </span>
           {questions.map((q, idx) => {
             const record = progress.answeredChallenges[q.id];
@@ -142,12 +153,22 @@ export default function QuizTestingPage() {
           })}
         </div>
 
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          Отвечено в сессии:{" "}
-          <strong className="font-mono font-semibold text-slate-900 dark:text-white">
-            {answeredCount} / {questions.length}
-          </strong>
-        </span>
+        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span>
+            Отвечено:{" "}
+            <strong className="font-mono font-semibold text-slate-900 dark:text-white">
+              {answeredCount} / {questions.length}
+            </strong>
+          </span>
+          {answeredCount > 0 && (
+            <span>
+              Верно:{" "}
+              <strong className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+                {sessionCorrectCount} ({sessionAccuracyPct}%)
+              </strong>
+            </span>
+          )}
+        </div>
       </Card>
 
       {/* Основная карточка клинического вопроса */}
@@ -157,6 +178,9 @@ export default function QuizTestingPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="teal">{currentQuestion.organSystem}</Badge>
               <Badge variant="outline">{currentQuestion.difficulty}</Badge>
+              <Badge variant="amber" className="text-[10px]">
+                Демо-вопрос
+              </Badge>
             </div>
             <span className="font-mono text-xs text-slate-400">
               Вопрос {currentQuestionIndex + 1} из {questions.length}
@@ -269,9 +293,11 @@ export default function QuizTestingPage() {
                 {currentQuestion.conciseExplanation}
               </p>
 
-              <div className="rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 font-mono text-xs text-teal-800 dark:border-slate-800 dark:bg-slate-900/70 dark:text-teal-300">
-                {currentQuestion.mechanismTakeaway}
-              </div>
+              {preferences.showClinicalMnemonics && (
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 font-mono text-xs text-teal-800 dark:border-slate-800 dark:bg-slate-900/70 dark:text-teal-300">
+                  {currentQuestion.mechanismTakeaway}
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-4 pt-1 text-xs">
                 {relatedDrug && (
@@ -317,6 +343,75 @@ export default function QuizTestingPage() {
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </CardFooter>
+      </Card>
+
+      {/* Итоговый результат тестирования (текущая попытка) */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+          <div className="flex items-center gap-2">
+            <Award
+              className="h-4 w-4 text-teal-600 dark:text-teal-400"
+              aria-hidden="true"
+            />
+            <CardTitle>
+              {isAllQuestionsAnswered
+                ? "Тестирование завершено — итоговый результат"
+                : "Текущий результат тестирования"}
+            </CardTitle>
+          </div>
+          <Badge variant={isAllQuestionsAnswered ? "emerald" : "outline"}>
+            {isAllQuestionsAnswered
+              ? "Все задачи решены"
+              : `Решено ${answeredCount} из ${questions.length}`}
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-xs">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-900/50">
+              <p className="text-slate-500 dark:text-slate-400">
+                Точность в текущем тесте
+              </p>
+              <p className="mt-1 font-mono text-lg font-semibold text-slate-900 dark:text-white">
+                {answeredCount > 0 ? `${sessionAccuracyPct}%` : "—"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <p className="text-emerald-800 dark:text-emerald-300">
+                Правильных ответов
+              </p>
+              <p className="mt-1 font-mono text-lg font-semibold text-emerald-900 dark:text-emerald-200">
+                {sessionCorrectCount} из {questions.length}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-rose-200/70 bg-rose-50/40 p-3.5 dark:border-rose-900/50 dark:bg-rose-950/20">
+              <p className="text-rose-800 dark:text-rose-300">
+                Неправильных ответов
+              </p>
+              <p className="mt-1 font-mono text-lg font-semibold text-rose-900 dark:text-rose-200">
+                {sessionIncorrectCount}
+              </p>
+            </div>
+          </div>
+
+          <ProgressBar
+            value={Math.round((answeredCount / questions.length) * 100)}
+            label="Прогресс прохождения текущего теста"
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Все ваши ответы автоматически сохраняются в браузере и учитываются
+              на странице «Прогресс».
+            </p>
+            <Button variant="outline" size="sm" onClick={restartQuizSession}>
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Пройти тест заново</span>
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       <DemoDisclaimer />

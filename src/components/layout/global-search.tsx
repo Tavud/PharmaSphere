@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CornerDownLeft,
+  GraduationCap,
   Layers,
   Pill,
   Search,
@@ -21,10 +22,10 @@ import { useAppState } from "@/features/preferences/app-state-context";
 
 const SUGGESTED_SEARCH_CHIPS = [
   "Метопролол",
+  "Конкор",
   "Лизиноприл",
   "Бета-адреноблокаторы",
-  "Атропин",
-  "Петлевые диуретики",
+  "РААС",
   "NKCC2",
 ] as const;
 
@@ -56,7 +57,7 @@ function SearchResultsList({
           По запросу «{trimmedQuery}» совпадений не найдено
         </p>
         <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-          В демо-каталоге 7 препаратов и 6 групп. Примеры запросов:
+          В демо-каталоге 10 препаратов, 6 групп и 3 учебных модуля. Примеры:
         </p>
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
           {SUGGESTED_SEARCH_CHIPS.map((chip) => (
@@ -79,8 +80,8 @@ function SearchResultsList({
       <div className="flex items-center justify-between bg-slate-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400">
         <span>
           {trimmedQuery.length > 0
-            ? `Найдено в демо-каталоге: ${results.length}`
-            : "Быстрый переход (Демо-каталог)"}
+            ? `Найдено в каталоге: ${results.length}`
+            : "Быстрый переход (Препараты, группы и обучение)"}
         </span>
         <span className="hidden sm:inline font-normal normal-case text-slate-400">
           ↑↓ и Enter
@@ -96,6 +97,7 @@ function SearchResultsList({
         {results.map((result, index) => {
           const isSelected = index === activeIndex;
           const isDrug = result.category === "drug";
+          const isModule = result.category === "module";
 
           return (
             <li
@@ -120,6 +122,11 @@ function SearchResultsList({
                     className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400"
                     aria-hidden="true"
                   />
+                ) : isModule ? (
+                  <GraduationCap
+                    className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <Layers
                     className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400"
@@ -133,10 +140,16 @@ function SearchResultsList({
                       {result.title}
                     </span>
                     <Badge
-                      variant={isDrug ? "teal" : "default"}
+                      variant={
+                        isDrug ? "teal" : isModule ? "emerald" : "default"
+                      }
                       className="text-[10px]"
                     >
-                      {isDrug ? "Препарат" : "Группа"}
+                      {isDrug
+                        ? "Препарат"
+                        : isModule
+                        ? "Учебный модуль"
+                        : "Группа"}
                     </Badge>
                     <span className="text-[11px] text-slate-400 dark:text-slate-500">
                       • {result.matchedField}
@@ -207,14 +220,21 @@ export function GlobalSearchInline({ className }: { className?: string }) {
   const handleSelectResult = (result: SearchResult) => {
     recordStudyActivity({
       entityId: result.id.replace(
-        /^search-(drug|group)-|^suggest-(drug|group)-/,
+        /^search-(drug|group|module)-|^suggest-(drug|group|module)-/,
         ""
       ),
-      itemType: result.category === "drug" ? "drug" : "group",
+      itemType:
+        result.category === "drug"
+          ? "drug"
+          : result.category === "module"
+          ? "module"
+          : "group",
       title: result.title,
       categoryLabel:
         result.category === "drug"
           ? "Справочник препаратов (Поиск)"
+          : result.category === "module"
+          ? "Учебный модуль (Поиск)"
           : "Фармакологическая группа (Поиск)",
       href: result.href,
       timestampLabel: `Найдено через поиск${
@@ -271,7 +291,7 @@ export function GlobalSearchInline({ className }: { className?: string }) {
               ? `${listboxId}-option-${activeIndex}`
               : undefined
           }
-          aria-label="Поиск препаратов по МНН, рецепторам или фармакологическим группам"
+          aria-label="Поиск препаратов по МНН, торговым названиям, фармгруппам или учебным темам"
           value={query}
           onFocus={() => setIsOpen(true)}
           onChange={(e) => {
@@ -279,7 +299,7 @@ export function GlobalSearchInline({ className }: { className?: string }) {
             setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Поиск по МНН (Метопролол, Лизиноприл), мишени (β1, NKCC2) или фармгруппе..."
+          placeholder="Поиск по МНН (Метопролол), торговому названию (Конкор), фармгруппе или теме обучения..."
           className="h-9 w-full rounded-md border border-slate-200/90 bg-white pl-8 pr-8 text-[13px] text-slate-900 placeholder:text-slate-400 transition-colors focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         {query.length > 0 && (
@@ -372,14 +392,21 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const handleSelectResult = (result: SearchResult) => {
     recordStudyActivity({
       entityId: result.id.replace(
-        /^search-(drug|group)-|^suggest-(drug|group)-/,
+        /^search-(drug|group|module)-|^suggest-(drug|group|module)-/,
         ""
       ),
-      itemType: result.category === "drug" ? "drug" : "group",
+      itemType:
+        result.category === "drug"
+          ? "drug"
+          : result.category === "module"
+          ? "module"
+          : "group",
       title: result.title,
       categoryLabel:
         result.category === "drug"
           ? "Справочник препаратов (Поиск)"
+          : result.category === "module"
+          ? "Учебный модуль (Поиск)"
           : "Фармакологическая группа (Поиск)",
       href: result.href,
       timestampLabel: `Найдено через быстрый поиск${
@@ -440,7 +467,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Введите МНН, рецептор или фармакологическую группу..."
+            placeholder="Введите МНН, торговое название, фармгруппу или учебную тему..."
             className="w-full bg-transparent px-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           {query && (

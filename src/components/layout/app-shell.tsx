@@ -40,9 +40,10 @@ export interface NavGroup {
 export const NAVIGATION_GROUPS: readonly NavGroup[] = [
   {
     id: "main",
+    title: "Главная",
     items: [
       {
-        label: "Главная",
+        label: "Обзор",
         href: "/app",
         icon: LayoutDashboard,
       },
@@ -69,7 +70,7 @@ export const NAVIGATION_GROUPS: readonly NavGroup[] = [
     title: "Обучение",
     items: [
       {
-        label: "Модули",
+        label: "Учебные модули",
         href: "/app/learning",
         icon: GraduationCap,
       },
@@ -111,17 +112,17 @@ function isRouteActive(pathname: string, itemHref: string): boolean {
 }
 
 function resolveSectionBreadcrumb(pathname: string): string {
-  if (pathname === "/app") return "Рабочее пространство";
+  if (pathname === "/app") return "Главная / Рабочее пространство";
   if (pathname.startsWith("/app/drugs/")) return "Библиотека / Профиль препарата";
   if (pathname.startsWith("/app/drugs")) return "Библиотека / Препараты";
   if (pathname.startsWith("/app/groups"))
     return "Библиотека / Фармакологические группы";
-  if (pathname.startsWith("/app/learning")) return "Обучение / Модули";
+  if (pathname.startsWith("/app/learning")) return "Обучение / Учебные модули";
   if (pathname.startsWith("/app/quiz")) return "Обучение / Тестирование";
   if (pathname.startsWith("/app/progress")) return "Обучение / Прогресс";
   if (pathname.startsWith("/app/favorites")) return "Личное / Избранное";
   if (pathname.startsWith("/app/settings")) return "Личное / Настройки";
-  return "Рабочее пространство";
+  return "Главная / Рабочее пространство";
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -282,7 +283,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
             </div>
             <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-              7 препаратов • 6 групп • 5 тестов
+              10 препаратов • 6 групп • 5 тестов
             </p>
           </div>
         </div>

@@ -24,8 +24,10 @@ export interface PharmacologicalGroup {
   shortName: string;
   organSystem: OrganSystem;
   primaryTarget: string;
+  classification: string[];
   mechanismSummary: string;
   clinicalOverview: string;
+  keyRepresentatives: string[];
   prototypeDrugId: string;
   drugCountInDemo: number;
   isDemoContent: true;
@@ -45,6 +47,7 @@ export interface Drug {
   pharmacodynamics: string;
   shortDescription: string;
   educationalSummary: string;
+  dosingSummary: string;
   keyPharmacokinetics: {
     routeSummary: string;
     absorptionAndDistribution: string;
@@ -87,6 +90,8 @@ export interface LearningModuleTopic {
   title: string;
   summary: string;
   durationMinutes: number;
+  keyPoints: string[];
+  clinicalNote: string;
 }
 
 export interface LearningModule {
@@ -123,9 +128,13 @@ export interface LearningProgress {
   currentStreakDays: number;
   /** Прогресс по ID учебного модуля (0..100) */
   moduleProgressMap: Record<string, number>;
-  /** Записанные ответы на вопросы дня для защиты от повторного начисления баллов */
+  /** Список ID реально изученных тем учебных модулей */
+  completedTopicIds: string[];
+  /** Количество завершённых сессий тестирования */
+  completedQuizzesCount: number;
+  /** Записанные ответы на тестовые вопросы для защиты от повторного начисления баллов */
   answeredChallenges: Record<string, AnsweredChallengeRecord>;
-  /** ID текущего активного вопроса дня */
+  /** ID текущего активного вопроса тестирования */
   activeChallengeQuestionId: string;
   isDemoBaseline: boolean;
 }
@@ -168,7 +177,7 @@ export interface UserPreferences {
   compactCards: boolean;
 }
 
-export type SearchResultCategory = "drug" | "group";
+export type SearchResultCategory = "drug" | "group" | "module";
 
 export interface SearchResult {
   id: string;

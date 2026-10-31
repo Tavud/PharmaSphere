@@ -34,7 +34,7 @@ const QUICK_ACTIONS = [
   },
   {
     id: "qa-take-quiz",
-    title: "Пройти тест",
+    title: "Пройти тестирование",
     description: "Клинические задачи с разбором ответов",
     href: "/app/quiz",
     icon: ClipboardCheck,

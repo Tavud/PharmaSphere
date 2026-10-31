@@ -35,8 +35,20 @@ export function ContinueLearningCard() {
       <CardContent className="p-0">
         <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
           {modules.map((mod) => {
+            const completedInMod = mod.topics.filter((t) =>
+              progress.completedTopicIds.includes(t.id)
+            ).length;
             const percent =
-              progress.moduleProgressMap[mod.id] ?? mod.defaultProgressPercent;
+              mod.topics.length > 0
+                ? Math.round((completedInMod / mod.topics.length) * 100)
+                : progress.moduleProgressMap[mod.id] ??
+                  mod.defaultProgressPercent;
+            const nextUnfinished = mod.topics.find(
+              (t) => !progress.completedTopicIds.includes(t.id)
+            );
+            const topicSubtitle = nextUnfinished
+              ? `Следующая тема ${nextUnfinished.number} из ${mod.topics.length}: ${nextUnfinished.title}`
+              : "Все темы модуля изучены (100%)";
             const moduleHref = `/app/learning?module=${mod.id}`;
 
             return (
@@ -68,7 +80,7 @@ export function ContinueLearningCard() {
                       </Badge>
                     </div>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {mod.lastTopicTitle}
+                      {topicSubtitle}
                     </p>
                   </div>
 

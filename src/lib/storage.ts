@@ -277,6 +277,16 @@ function validateLearningProgress(raw: unknown): LearningProgress | null {
       ? raw.activeChallengeQuestionId
       : DEFAULT_DEMO_LEARNING_PROGRESS.activeChallengeQuestionId;
 
+  const completedTopicIds: string[] = Array.isArray(raw.completedTopicIds)
+    ? raw.completedTopicIds.filter((id): id is string => typeof id === "string")
+    : [...DEFAULT_DEMO_LEARNING_PROGRESS.completedTopicIds];
+
+  const completedQuizzesCount =
+    typeof raw.completedQuizzesCount === "number" &&
+    raw.completedQuizzesCount >= 0
+      ? Math.floor(raw.completedQuizzesCount)
+      : 0;
+
   return {
     questionsAnswered: Math.max(0, Math.floor(raw.questionsAnswered)),
     correctAnswersCount: Math.max(0, Math.floor(raw.correctAnswersCount)),
@@ -284,9 +294,14 @@ function validateLearningProgress(raw: unknown): LearningProgress | null {
       100,
       Math.max(0, Math.round(raw.accuracyPercentage))
     ),
-    studyTopicsCompleted: Math.max(0, Math.floor(raw.studyTopicsCompleted)),
+    studyTopicsCompleted: Math.max(
+      completedTopicIds.length,
+      Math.floor(raw.studyTopicsCompleted)
+    ),
     currentStreakDays: Math.max(0, Math.floor(raw.currentStreakDays)),
     moduleProgressMap,
+    completedTopicIds,
+    completedQuizzesCount,
     answeredChallenges,
     activeChallengeQuestionId,
     isDemoBaseline:

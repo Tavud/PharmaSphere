@@ -1,5 +1,6 @@
 import {
   getAllDrugs,
+  getAllLearningModules,
   getAllPharmacologicalGroups,
   getPharmacologicalGroupById,
 } from "@/lib/data-service";
@@ -12,8 +13,9 @@ interface ScoredSearchResult {
 
 /**
  * Поисковый движок по демонстрационному каталогу фармакологии.
- * - Ищет по русским и международным названиям (МНН), торговым названиям, синонимам,
- *   классам, рецепторным мишеням и фармакологическим группам.
+ * - Ищет по МНН, торговым названиям, синонимам, фармакологическим классам,
+ *   рецепторным мишеням, механизмам действия, показаниям, фармакологическим группам
+ *   и учебным модулям/темам.
  * - Нечувствителен к регистру и поддерживает частичные совпадения.
  * - Ранжирует точные и префиксные совпадения выше внутренних подстрок.
  */
@@ -26,6 +28,7 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
   const scoredResults: ScoredSearchResult[] = [];
   const drugs = getAllDrugs();
   const groups = getAllPharmacologicalGroups();
+  const modules = getAllLearningModules();
 
   for (const drug of drugs) {
     const parentGroup = getPharmacologicalGroupById(drug.groupId);
@@ -41,6 +44,10 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
       alias.toLowerCase().includes(normalizedQuery)
     );
     const targetLower = drug.primaryTarget.toLowerCase();
+    const mechanismLower = drug.mechanismOfAction.toLowerCase();
+    const indicationMatch = drug.classicIndications.find((ind) =>
+      ind.toLowerCase().includes(normalizedQuery)
+    );
 
     let score = 0;
     let matchedField = "МНН препарата";
@@ -55,7 +62,7 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
       score = 90;
       matchedField = "МНН препарата";
     } else if (genericLower.includes(normalizedQuery)) {
-      score = 80;
+      score = 82;
       matchedField = "МНН препарата";
     } else if (tradeMatch) {
       score = 78;
@@ -71,8 +78,14 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
       score = 65;
       matchedField = "Фармакологический класс";
     } else if (targetLower.includes(normalizedQuery)) {
-      score = 55;
+      score = 58;
       matchedField = `Мишень (${drug.primaryTarget})`;
+    } else if (mechanismLower.includes(normalizedQuery)) {
+      score = 50;
+      matchedField = "Механизм действия";
+    } else if (indicationMatch) {
+      score = 45;
+      matchedField = "Показание к применению";
     }
 
     if (score > 0) {
@@ -97,6 +110,7 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
     const shortLower = group.shortName.toLowerCase();
     const systemLower = group.organSystem.toLowerCase();
     const targetLower = group.primaryTarget.toLowerCase();
+    const mechLower = group.mechanismSummary.toLowerCase();
 
     let score = 0;
     let matchedField = "Фармакологическая группа";
@@ -120,8 +134,11 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
       score = 60;
       matchedField = `Система (${group.organSystem})`;
     } else if (targetLower.includes(normalizedQuery)) {
-      score = 50;
+      score = 52;
       matchedField = `Мишень (${group.primaryTarget})`;
+    } else if (mechLower.includes(normalizedQuery)) {
+      score = 44;
+      matchedField = "Механизм группы";
     }
 
     if (score > 0) {
@@ -136,6 +153,46 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
           description: group.mechanismSummary,
           matchedField,
           href: `/app/groups?group=${group.id}`,
+        },
+      });
+    }
+  }
+
+  for (const mod of modules) {
+    const titleLower = mod.title.toLowerCase();
+    const subtitleLower = mod.subtitle.toLowerCase();
+    const matchedTopic = mod.topics.find(
+      (t) =>
+        t.title.toLowerCase().includes(normalizedQuery) ||
+        t.summary.toLowerCase().includes(normalizedQuery)
+    );
+
+    let score = 0;
+    let matchedField = "Учебный модуль";
+
+    if (titleLower.includes(normalizedQuery)) {
+      score = 70;
+      matchedField = "Название модуля";
+    } else if (subtitleLower.includes(normalizedQuery)) {
+      score = 62;
+      matchedField = "Программа модуля";
+    } else if (matchedTopic) {
+      score = 56;
+      matchedField = `Тема ${matchedTopic.number}: ${matchedTopic.title}`;
+    }
+
+    if (score > 0) {
+      scoredResults.push({
+        score,
+        result: {
+          id: `search-module-${mod.id}`,
+          category: "module",
+          title: mod.title,
+          subtitle: mod.subtitle,
+          badgeText: mod.organSystem,
+          description: matchedTopic ? matchedTopic.summary : mod.subtitle,
+          matchedField,
+          href: `/app/learning?module=${mod.id}`,
         },
       });
     }
@@ -156,6 +213,7 @@ export function searchPharmacologyCatalog(rawQuery: string): SearchResult[] {
 export function getQuickSearchSuggestions(): SearchResult[] {
   const featured = getAllDrugs().slice(0, 3);
   const topGroups = getAllPharmacologicalGroups().slice(0, 2);
+  const topModule = getAllLearningModules()[0];
 
   return [
     ...featured.map((drug) => ({
@@ -175,8 +233,22 @@ export function getQuickSearchSuggestions(): SearchResult[] {
       subtitle: group.shortName,
       badgeText: group.organSystem,
       description: group.mechanismSummary,
-      matchedField: "Базовая группа",
+      matchedField: "Фармакологическая группа",
       href: `/app/groups?group=${group.id}`,
     })),
+    ...(topModule
+      ? [
+          {
+            id: `suggest-module-${topModule.id}`,
+            category: "module" as const,
+            title: topModule.title,
+            subtitle: topModule.subtitle,
+            badgeText: topModule.organSystem,
+            description: topModule.subtitle,
+            matchedField: "Учебный материал",
+            href: `/app/learning?module=${topModule.id}`,
+          },
+        ]
+      : []),
   ];
 }
